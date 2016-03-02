@@ -55,7 +55,6 @@ import os
 import xmlrpclib
 import datetime
 import time
-import mimetypes
 
 class WordPressException(exceptions.Exception):
 	"""Custom exception for WordPress client operations
@@ -233,6 +232,7 @@ class WordPressClient:
 			'description' : post.description,
 			'mt_keywords': post.tags,
 			'custom_fields': post.customFields,
+			'dateCreated': xmlrpclib.DateTime(post.date),
 		}
 		
 		# add categories
@@ -373,21 +373,16 @@ class WordPressClient:
 			f = file(mediaFileName, 'rb')
 			mediaBits = f.read()
 			f.close()
-
-			mimetype = 'unknown/unknown'
-			mimeguess = mimetypes.guess_type(mediaFileName)
-			if mimeguess and mimeguess[0]:
-				mimetype = mimeguess[0]
-
+			
 			mediaStruct = {
 				'name' : os.path.basename(mediaFileName),
-				'type' : mimetype,
-				'bits' : xmlrpclib.Binary(mediaBits)
+				'bits' : xmlrpclib.Binary(mediaBits),
+				'type' : 'image/jpeg' if mediaFileName.lower().endswith('jpg') else ('image/png' if mediaFileName.lower().endswith('png') else ('application/pdf') if mediaFileName.lower().endswith('pdf') else ('image/gif 'if mediaFileName.lower().endswith('gif') else 'application/msword'))
 			}
 			
 			result = self._server.metaWeblog.newMediaObject(self.blogId, 
 									self.user, self.password, mediaStruct)
-			return result['url']
+			return result
 			
 		except xmlrpclib.Fault, fault:
 			raise WordPressException(fault)
